@@ -2,6 +2,7 @@
 import Imap from "node-imap";
 import { user, pass } from "../env.js";
 import { logMessage } from "../utilities/comment.js";
+import { simpleParser } from "mailparser";
 
 // Configuration de l'IMAP
 const IMAP_CONFIG = {
@@ -35,7 +36,7 @@ imap.once("ready", () => {
         }
 
         // Affichage du nombre total de messages dans la boîte de réception
-        logMessage("-", `Total messages: ${box.messages.total}`);
+        console.log(`Total messages: ${box.messages.total}`);
 
         // Recherche les e-mails non lus sur le serveur IMAP
         imap.search(["UNSEEN"], (err, results) => {
@@ -62,13 +63,32 @@ imap.once("ready", () => {
             // Écoute l'événement "message" déclenché lorsqu'un nouvel e-mail est récupéré
             f.on("message", (message, seqno) => {
                 // Appelle la fonction logMessage pour afficher un message indiquant qu'un nouvel e-mail a été reçu
-                logMessage("-", `Nouveau message #${seqno}`);
+                // console.log(`Nouveau message #${seqno}`);
+
+                message.on("body", (stream, info) => {
+                    // console.log(stream);
+
+                    simpleParser(stream, (err, parsed) => {
+                        // console.log(err);
+                        if (err) {
+                            console.log(`Erreur de parsage du mail : ${err}`)
+                            return;
+                        }
+
+                        const { headers, subject, from, to, cc, date, messageId, html, text, textAsHtml, attachments } = parsed
+
+                        console.log(subject);
+                    })
+
+                    // console.log(info);
+                })
+
             });
 
             // Écoute l'événement "error" déclenché en cas d'erreur lors de la récupération des e-mails
             f.once("error", (err) => {
                 // Appelle la fonction logMessage pour afficher un message d'erreur indiquant le problème de récupération des e-mails
-                logMessage("#", `Erreur lors de la récupération des e-mails : ${err}`);
+                console.log(`Erreur lors de la récupération des e-mails : ${err}`);
             });
 
             // Écoute l'événement "end" déclenché lorsque tous les nouveaux e-mails ont été récupérés
